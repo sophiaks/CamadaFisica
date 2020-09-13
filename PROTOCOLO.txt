@@ -1,0 +1,12 @@
+PROTOCOLO
+
+HEAD 
+1. Tipo da mensagem
+    DATA: 0
+    HANDSHAKE: 1
+    CONFIRMACAO: 2
+2. Handshake OK (server tá vivo?)
+3. Número de payloads
+4. Tamnho do payload enviado
+5. Número do payload enviado
+6 - 10: Tamanho do payload em bytes
