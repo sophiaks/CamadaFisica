@@ -70,10 +70,18 @@ class RX(object):
         return(b)
 
     def getNData(self, size):
-        while(self.getBufferLen() < size):
-            time.sleep(0.05)
 
-        return(self.getBuffer(size))
+        while (self.getBufferLen() < size):
+            if size == 14:
+                time.sleep(5)
+                break
+            else:
+                time.sleep(0.05)
+        if self.getIsEmpty() == True:
+            print("Buffer vazio")
+            return 0
+        else:
+            return(self.getBuffer(size))
 
     def clearBuffer(self):
         self.buffer = b""
