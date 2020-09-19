@@ -10,58 +10,97 @@
 # para acompanhar a execução e identificar erros, construa prints ao longo do código!
 
 from enlace import *
+from classes import *
+from functions import *
 import time
 import os
 numeroP = 0
 
 serialNameRecebe = "COM3"
-imageW = "eikiRecebido.png"
 errorOrder = False
 errorSize = False
+global listaPacotes
+listaPacotes = []
 
 
-def readHead(head):
-    tipoMsg = head[0]
-    handshake = head[1]
-    nPayload = head[2]
-    tamanhoPayload = head[3]
-    i = head[4]
-    tamanhoTotal = head[5:]
-    tamanhoTotal = int.from_bytes(tamanhoTotal, byteorder='big')
-    print("\n\n_____PACOTE {0}_____\n\n".format(i))
-    print('\n TipoMsg: {0} \nHandshake: {1} \nNumero de Payloads: {2} \nNumero desse payload: {3} \nTamanho desse Payload: {4}\nTamanho total: {5} bytes'.format(
-        tipoMsg, handshake, nPayload, i, tamanhoPayload, tamanhoTotal))
-    if tipoMsg == 0:
-        tipoMsg = "DADOS"
-        print("Tipo da mensagem: {0}".format(tipoMsg))
-        if tipoMsg == 1:
-            tipoMsg = "HANDSHAKE"
-    return tipoMsg, handshake, nPayload, tamanhoPayload, i, tamanhoTotal
+def getHandshake(com):
+    handshake1, nHandshake1 = com.getData(14)
+    ok = handshake1[1]
+    tipoMsg = handshake1[0]
+    print("Handshake recebido")
+    time.sleep(0.01)
+    print("Mandando confirmacao do handshake")
+
+    if ok == 1:
+        com.sendData(handshake1)
+        # 1 senddata e 3 getdatas!
+    else:
+        print("Recepcao do handshake falhou. Tenta novamente.")
+        com.disable()
 
 
-def makeHead(tipoMsg, handshake, nPayloadFloat, tamanhoPayload, i, tamanhoTotal):
-    '''
-    Cria o head na ordem: TIPO MENSAGEM, HANDSHAKE, NUMERO DE PAYLOADS, TAMANHO DO PAYLOAD, NUMERO DO PAYLOAD, TAMANHO TOTAL DA MSG
-    '''
-    tamanhoPayloadBytes = tamanhoPayload.to_bytes(1, byteorder='big')
-    handshakeBytes = handshake.to_bytes(1, byteorder="big")
-    tipoMsgBytes = tipoMsg.to_bytes(1, byteorder='big')
-    nPayloadBytes = nPayloadFloat.to_bytes(1, byteorder="big")
-    iBytes = i.to_bytes(1, byteorder='big')
-    tamanhoTotalBytes = tamanhoTotal.to_bytes(5, byteorder='big')
-
-    head = tipoMsgBytes + handshakeBytes + nPayloadBytes + \
-        tamanhoPayloadBytes + iBytes + tamanhoTotalBytes
-    return head
+def getHead(com):
+    print('Esperando o head')
+    head, nHead = com.getData(10)
+    head = bytesToHead(head)
 
 
-def printPayloadInfo(tipoMsg, handshake, nPayload, tamanhoPayload, i, tamanhoTotal):
-    print('\n\nPacote {0}/{1}\n\n'.format(i, nPayload))
-    print('\n\n_____PAYLOAD {0}_____\n\n'.format(i))
-    print('Handshake: {0} \nNumero de Payloads: {1} \nNumero desse payload: {2} \nTamanho desse Payload: {3} Bytes\nTamanho total: {4} bytes'.format(
-        handshake, nPayload, i, tamanhoPayload, tamanhoTotal))
-    print(
-        '\n{0}/{1} Bytes recebidos'.format(tamanhoPayload, tamanhoTotal))
+def getPayload(com, tamanhoPayload):
+    payload, numeroPayload = com.getData(tamanhoPayload)
+    if payloadCompleto == None:
+        payloadCompleto = payload
+    else:
+        payloadCompleto += payload
+
+
+def getEop(com):
+    global eop
+    global intEop
+    eop, nEop = com.getData(4)
+    intEop = int.from_bytes(eop, byteorder='big')
+
+
+def sendConfirmation(com, nPayload):
+    if nPayload == numeroP + 1:
+        print("Ordem dos pacotes correta")
+    else:
+        print("\n\nOrdem dos pacotes incorreta.")
+        errorOrder = True
+        head = Head(6, 0, 0, 0, 0, 0, numeroP+1, listaPacotes[-1], 0, 0)
+    if intEop == 4321:
+        print("End of package do pacote {0} recebido".format(nPayload))
+        confirmation = head + eop
+        com.sendData(confirmation)
+    else:
+        print(
+            "Ocorreu algum erro. O tamanho do pacote nao corresponde com o informado no head.\n")
+        errorSize = True
+        head = Head(6, 0, 0, 0, 0, 0,)
+        confirmation = head + eop
+
+
+def checkAllPackages(com):
+    print("i, nPayload: {0}, {1}".format(i, nPayload))
+    if i == nPayload:
+        print("Todos os pacotes recebidos.")
+        print("Tamanho total recebido: {}".format(len(payloadCompleto)))
+        # ATE AQUI TA OK
+        tipoMsg = 2
+        # TIPO MSG - CONFIRMACAO
+        yama = len(payloadCompleto)
+        print(yama)
+        headson = Head(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        payloaderson = yama.to_bytes(5, byteorder='big')
+        pacotejohnson = headson + payloaderson + eop
+        time.sleep(1)
+        com.sendData(pacotejohnson)
+        time.sleep(1)
+        print("Acabaram os pacotes :)")
+        print("TAMANHO ENVIADO PRO CLIENTE")
+        global finished
+        finished = True
+    else:
+        print('Não acabaram os pacotes')
 
 
 def main():
@@ -75,113 +114,27 @@ def main():
         com2.enable()
         print("Comunicacao do segundo arduino aberta com sucesso")
         print("Esperando handshake...")
-#___________________________________________________________#
-#                                                           #
-#                    RECEBENDO O HANDSHAKE                  #
-#___________________________________________________________#
 
-        handshake1, nHandshake1 = com2.getData(14)
-        ok = handshake1[1]
-        tipoMsg = handshake1[0]
-        print("Handshake recebido")
-        time.sleep(0.01)
-        print("Mandando confirmacao do handshake")
-#___________________________________________________________#
-#                                                           #
-#                    ENVIANDO O HANDSHAKE                   #
-#___________________________________________________________#
+        getHandshake(com2)
 
-        if ok == 1:
-            com2.sendData(handshake1)
-            # 1 senddata e 3 getdatas!
-        else:
-            print("Recepcao do handshake falhou. Tenta novamente.")
-            com2.disable()
         i = 0
         nPayload = 1
-        finished = False
-        while i < nPayload and not finished:
-            print('Esperando o head')
-#___________________________________________________________#
-#                                                           #
-#                    RECEBENDO O HEAD                       #
-#___________________________________________________________#
+        while i < nPayload:
+            getHead(com2)
+            getPayload(com2, tamanhoPayload)
+            getEop(com2)
 
-            head, nHead = com2.getData(10)
-            tipoMsg, handshake, nPayload, tamanhoPayload, i, tamanhoTotal = readHead(
-                head)
-            if nPayload == numeroP + 1:
-                print("Ordem dos pacotes correta")
-            else:
-                print("\n\nOrdem dos pacotes incorreta.")
-                errorOrder = True
+            checkPackageOrder(nPayload)
 
-#___________________________________________________________#
-#                                                           #
-#                    RECEBENDO O PAYLOAD                    #
-#___________________________________________________________#
+            sendConfirmation(com2)
 
-            payload, numeroPayload = com2.getData(tamanhoPayload)
-            if payloadCompleto == None:
-                payloadCompleto = payload
-            else:
-                payloadCompleto += payload
-#___________________________________________________________#
-#                                                           #
-#                    RECEBENDO O EOP                        #
-#___________________________________________________________#
-
-            eop, nEop = com2.getData(4)
-            intEop = int.from_bytes(eop, byteorder='big')
-
-#___________________________________________________________#
-#                                                           #
-#             MANDANDO CONFIRMACAO DO RECEBIMENTO           #
-#___________________________________________________________#
-
-            if intEop == 4321:
-                print("End of package do pacote {0} recebido".format(i))
-                confirmation = head + eop
-                com2.sendData(confirmation)
-            else:
-                print(
-                    "Ocorreu algum erro. O tamanho do pacote nao corresponde com o informado no head.\n")
-                errorSize = True
-                confirmation = head + eop
-                com2.sendData(confirmation)
-
-#___________________________________________________________#
-#                                                           #
-#                 ENCERRANDO A COMUNICACAO                  #
-#___________________________________________________________#
-
-            print("i, nPayload: {0}, {1}".format(i, nPayload))
             if i == nPayload:
-                print("Todos os pacotes recebidos.")
-                print("Tamanho total recebido: {}".format(len(payloadCompleto)))
-                # ATE AQUI TA OK
-                tipoMsg = 2
-                # TIPO MSG - CONFIRMACAO
-                yama = len(payloadCompleto)
-                print(yama)
-                headson = makeHead(2, 1, 1, 1, 1, yama)
-                payloaderson = yama.to_bytes(5, byteorder='big')
-                pacotejohnson = headson + payloaderson + eop
+                break
 
 #___________________________________________________________#
 #                                                           #
 #                 ENCERRANDO A COMUNICACAO                  #
 #___________________________________________________________#
-
-                # pacote: 19 bytes
-                time.sleep(1)
-                com2.sendData(pacotejohnson)
-                time.sleep(1)
-                print("Acabaram os pacotes :)")
-                print("TAMANHO ENVIADO PRO CLIENTE")
-                break
-            else:
-                print('Não acabaram os pacotes >= Acabaram os pacotes :)')
 
         print("---------------------------------------")
         print("Comunicacao encerrada. Parando timer...")
