@@ -4,22 +4,32 @@
 # 11/08/2020
 # Aplicação
 ####################################################
-
-
-# esta é a camada superior, de aplicação do seu software de comunicação serial UART.
-# para acompanhar a execução e identificar erros, construa prints ao longo do código!
-
-from enlace import *
-from classes import *
-from functions import *
 import time
-import os
-numeroP = 0
+import logging
+from classes import Payload
+from functions import *
+from enlace import *
+
 
 serialNameRecebe = "COM3"
 errorOrder = False
 errorSize = False
+numeroP = 0
+fmtstr = " Name: sophia : %(asctime)s: (%(filename)s): %(levelname)s: %(funcName)s Line: %(lineno)d - %(message)s"
+datestr = "%m/%d/%Y %I:%M:%S %p "
+# basic logging config
+logging.basicConfig(
+    filename="custom_log_output.log",
+    level=logging.DEBUG,
+    filemode="w",
+    format=fmtstr,
+    datefmt=datestr,
+)
+
 global listaPacotes
+global i
+global nPayloads
+
 listaPacotes = []
 
 
@@ -27,8 +37,10 @@ def getHandshake(com):
     handshake1, nHandshake1 = com.getData(14)
     ok = handshake1[1]
     tipoMsg = handshake1[0]
+    logging.info("Handshake recebido")
     print("Handshake recebido")
     time.sleep(0.01)
+    logging.info("Mandando confirmacao do handshake")
     print("Mandando confirmacao do handshake")
 
     if ok == 1:
@@ -42,7 +54,9 @@ def getHandshake(com):
 def getHead(com):
     print('Esperando o head')
     head, nHead = com.getData(10)
+    print("Head recebido")
     head = bytesToHead(head)
+    return head
 
 
 def getPayload(com, tamanhoPayload):
@@ -58,29 +72,36 @@ def getEop(com):
     global intEop
     eop, nEop = com.getData(4)
     intEop = int.from_bytes(eop, byteorder='big')
+    return eop
 
 
-def sendConfirmation(com, nPayload):
+def sendConfirmation(com, nPayload, eopP):
+    print("Verificando pacotes")
     if nPayload == numeroP + 1:
         print("Ordem dos pacotes correta")
     else:
         print("\n\nOrdem dos pacotes incorreta.")
-        errorOrder = True
         head = Head(6, 0, 0, 0, 0, 0, numeroP+1, listaPacotes[-1], 0, 0)
-    if intEop == 4321:
+        erro = True
+
+    if eopP == eop:
         print("End of package do pacote {0} recebido".format(nPayload))
-        confirmation = head + eop
-        com.sendData(confirmation)
+        head = Head(4, 0, 0, 0, 0, 0, nPayload, listaPacotes[-1], 0, 0)
+
     else:
         print(
             "Ocorreu algum erro. O tamanho do pacote nao corresponde com o informado no head.\n")
-        errorSize = True
-        head = Head(6, 0, 0, 0, 0, 0,)
-        confirmation = head + eop
+        erro = True
+        head = Head(6, 0, 0, 0, 0, 0, nPayload, nPayload-1, 0, 0)
+    if erro == False:
+        listaPacotes.append(nPayload)
+        print("Payload {0} adicionado à lista!".format(nPayload))
+    confirmation = head + eop
+    com.sendData(confirmation)
 
 
 def checkAllPackages(com):
-    print("i, nPayload: {0}, {1}".format(i, nPayload))
+
     if i == nPayload:
         print("Todos os pacotes recebidos.")
         print("Tamanho total recebido: {}".format(len(payloadCompleto)))
@@ -107,6 +128,8 @@ def main():
 
     try:
         global payloadCompleto
+        global nPayload
+        global i
         payloadCompleto = None
         errorOrder = False
         errorSize = False
@@ -120,13 +143,11 @@ def main():
         i = 0
         nPayload = 1
         while i < nPayload:
-            getHead(com2)
-            getPayload(com2, tamanhoPayload)
-            getEop(com2)
-
-            checkPackageOrder(nPayload)
-
-            sendConfirmation(com2)
+            head = getHead(com2)
+            getPayload(com2, head.tamanhoPayload)
+            eop = getEop(com2)
+            sendConfirmation(com2, nPayload, eop)
+            i += 1
 
             if i == nPayload:
                 break

@@ -1,7 +1,4 @@
-import math
 from aplicacaoSo import dictPayloads
-global eop
-eop = b'\0xFF\0xAA\0xFF\0xAA'
 
 
 class Head:
@@ -64,6 +61,20 @@ class Head:
         print('Erro no pacote: {}'.format(self.nErro))
         print('Último pacote enviado com sucesso: {}\n'.format(self.ultimoPacoteOk))
 
+    def headToBytes(self):
+        h0 = self.h0
+        h1 = self.h1
+        h2 = self.h2
+        h3 = self.h3
+        h4 = self.h4
+        h5 = self.h5
+        h6 = self.h6
+        h7 = self.h7
+        h8 = self.h8
+        h9 = self.h9
+        bytes = h0 + h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8 + h9
+        return bytes
+
 
 class Payload():
     '''
@@ -88,8 +99,12 @@ class Pacote:
         else:
             self.pacote = head + self.eop
 
+    # def pacoteToBytes():
+
     def sendPacote(self, com):
+        print("Enviando pacote")
         com.sendData(self.pacote)
+        print("Pacote Enviado")
 
     def getPacote(self, com):
         com.getData(self.head.tamanhoPayload)

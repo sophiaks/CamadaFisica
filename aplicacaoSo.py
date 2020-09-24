@@ -4,42 +4,35 @@
 # 11/08/2020
 # Aplicação
 ####################################################
-
-
+from functions import *
+from classes import *
+import time
+from enlace import *
+eop = 1
 # esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 # para acompanhar a execução e identificar erros, construa prints ao longo do código!
 
-from enlace import *
-import PySimpleGUI as sg
-import tkinter as tk
-import time
-import math
-import os
-import subprocess
-from classes import *
-from functions import *
 global ok
+global dictPayloads
 
-
+dictPayloads = {}
 # serialNameEnvia = "COM3"
 serialNameEnvia = "COM4"
 inicia = False
 serialNameRecebe = "COM3"
 
-#window = tk.Tk()
-#e1 = tk.Entry(window)
-
-# e1.pack()
-#imageR = e1.get()
 imageR = "oiakon.png"
 txBuffer = open(imageR, 'rb').read()
 
 # Criando todos os payloads
-global dictPayloads
+
+
 createPayloads(txBuffer)
+print("Payloads Criados\n")
 
 
 def createHandshake():
+    print("Criando Handshake\n")
     headHandshake = Head(1, 1, 1, nPayloads, 0, 1, 0, 0, 0, 0)
     return headHandshake
 
@@ -52,13 +45,13 @@ def main():
         print("Comunicacao aberta com sucesso. Comecando timer...")
         t0 = time.time()
 
-        handshake = Pacote(createHandshake(), 0, eop)
+        handshake = Pacote(createHandshake().headToBytes(), 0, eop)
         print("Enviando Handshake")
-        handshake.sendPacote(com)
 
         while True:
-            com.sendData(handshake)
+            handshake.sendPacote(com)
             conf = getPackageConfirmation(com)
+            print()
             if conf == True:
                 break
             else:
@@ -112,12 +105,6 @@ def main():
     except Exception as ex:
         print(ex)
         com.disable()
-
-
-# button = tk.Button(window,
-#                   text='OK', command=main)
-# button.pack()
-# window.mainloop()
 
 
 # so roda o main quando for executado do terminal ... se for chamado dentro de outro modulo nao roda

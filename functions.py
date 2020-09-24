@@ -1,7 +1,5 @@
+from classes import Head
 import math
-from classes import *
-import aplicacaoSo2
-
 
 def createPayloads(img):
     global nPayloads
@@ -13,6 +11,7 @@ def createPayloads(img):
 
 
 def bytesToHead(bytes):
+    print("Transformando bytes recebidos em Head")
     h0 = bytes[0]
     h1 = bytes[1]
     h2 = bytes[2]
@@ -22,13 +21,16 @@ def bytesToHead(bytes):
     h6 = bytes[6]
     h7 = bytes[7]
     h8 = bytes[8]
+    print("h8 ok")
     h9 = bytes[9]
+    print("h9 ok")
     head = Head(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9)
+    print(head)
     return head
 
 
 def getPackageConfirmation(com):
-    headConf = com.getData(10)
+    headConf, nHeadConf = com.getData(10)
     eop = com.getData(4)
     headConf = bytesToHead(headConf)
     if headConf.h6 == 0 and eop is not None and headConf.h0 == 4:
