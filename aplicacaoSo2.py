@@ -6,9 +6,9 @@
 ####################################################
 import time
 import logging
-from classes import Payload
 from functions import *
 from enlace import *
+
 
 
 serialNameRecebe = "COM3"
@@ -35,13 +35,14 @@ listaPacotes = []
 
 def getHandshake(com):
     handshake1, nHandshake1 = com.getData(14)
+    print("Get data feito com sucesso")
     ok = handshake1[1]
     tipoMsg = handshake1[0]
-    logging.info("Handshake recebido")
+    logging.info("RECEPCAO: Handshake")
     print("Handshake recebido")
     time.sleep(0.01)
-    logging.info("Mandando confirmacao do handshake")
-    print("Mandando confirmacao do handshake")
+    logging.info("ENVIO: Confirmação do Handshake")
+    print("ENVIO: Confirmação do Handshake")
 
     if ok == 1:
         com.sendData(handshake1)
@@ -49,6 +50,9 @@ def getHandshake(com):
     else:
         print("Recepcao do handshake falhou. Tenta novamente.")
         com.disable()
+
+
+
 
 
 def getHead(com):

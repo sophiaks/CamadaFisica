@@ -8,7 +8,8 @@ from functions import *
 from classes import *
 import time
 from enlace import *
-eop = 1
+eop = b'\0xFF\0xAA\0xFF\0xAA'
+import math
 # esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 # para acompanhar a execução e identificar erros, construa prints ao longo do código!
 
@@ -25,7 +26,13 @@ imageR = "oiakon.png"
 txBuffer = open(imageR, 'rb').read()
 
 # Criando todos os payloads
-
+def createPayloads(img):
+    global nPayloads
+    global tamanhoTotal
+    global dictPayloads
+    dictPayloads = {}
+    nPayloads = math.ceil(len(img)/114)
+    tamanhoTotal = len(img)
 
 createPayloads(txBuffer)
 print("Payloads Criados\n")
@@ -51,7 +58,6 @@ def main():
         while True:
             handshake.sendPacote(com)
             conf = getPackageConfirmation(com)
-            print()
             if conf == True:
                 break
             else:
@@ -97,10 +103,6 @@ def main():
             if int.from_bytes(payloadTamanho, byteorder='big') == tamanhoTotal:
                 print("OPERACAO FEITA COM SUCESSO. TODOS OS BYTES FORAM RECEBIDOS")
                 com.disable()
-
-        else:
-            print("Pacotes de teste enviados.")
-            print("Confirmacao recebida!!")
 
     except Exception as ex:
         print(ex)
