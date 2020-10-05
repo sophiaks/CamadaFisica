@@ -1,14 +1,14 @@
-#####################################################
-# Camada Física da Computação
-# Carareto
-# 11/08/2020
-# Aplicação
-####################################################
+
+# @author Sophia Kerber Shigueoka
+# @email sophia.shigueoka@gmail.com
+# @create date 2020-10-05 00:06:18
+# @modify date 2020-10-05 00:08:52
+
 from functions import *
 from classes import *
 import time
 from enlace import *
-eop = b'\0xFF\0xAA\0xFF\0xAA'
+eop = b'\xff\xaa\xff\xaa'
 import math
 # esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 # para acompanhar a execução e identificar erros, construa prints ao longo do código!
@@ -33,6 +33,11 @@ def createPayloads(img):
     dictPayloads = {}
     nPayloads = math.ceil(len(img)/114)
     tamanhoTotal = len(img)
+    for i in range(0 ,nPayloads-1):
+        if i == nPayloads:
+            dictPayloads[i] = img[114*i:]
+        else:
+            dictPayloads[i] = img[114*i:114*(i+1)]   
 
 createPayloads(txBuffer)
 print("Payloads Criados\n")
@@ -51,10 +56,8 @@ def main():
         com.enable()
         print("Comunicacao aberta com sucesso. Comecando timer...")
         t0 = time.time()
-
         handshake = Pacote(createHandshake().headToBytes(), 0, eop)
         print("Enviando Handshake")
-
         while True:
             handshake.sendPacote(com)
             conf = getPackageConfirmation(com)
@@ -81,8 +84,8 @@ def main():
                 pacote = head + dictPayloads[i] + eop
                 com.sendData(pacote)
                 time.sleep(0.1)
-                # Confirmação é T4
                 getPackageConfirmation(com)
+
             if i == nPayloads:
                 print("ULTIMO PACOTE. RECEBENDO TAMANHO DO SERVER...")
                 time.sleep(0.1)
@@ -100,6 +103,7 @@ def main():
 
             print("TAMANHO RECEBIDO: {0} \nTAMANHO ESPERADO: {1}".format(
                 int.from_bytes(payloadTamanho, byteorder='big'), tamanhoTotal))
+            
             if int.from_bytes(payloadTamanho, byteorder='big') == tamanhoTotal:
                 print("OPERACAO FEITA COM SUCESSO. TODOS OS BYTES FORAM RECEBIDOS")
                 com.disable()

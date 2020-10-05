@@ -8,14 +8,19 @@ import time
 import logging
 from functions import *
 from enlace import *
-
+global listaPacotes
+global i
+global nPayloads
+global payloadCompleto
+payloadCompleto = None
+listaPacotes = []
 
 
 serialNameRecebe = "COM3"
 errorOrder = False
 errorSize = False
 numeroP = 0
-fmtstr = " Name: sophia : %(asctime)s: (%(filename)s): %(levelname)s: %(funcName)s Line: %(lineno)d - %(message)s"
+fmtstr = " Name: SERVER_SOPHIA : %(asctime)s: (%(filename)s): %(levelname)s: %(funcName)s Line: %(lineno)d - %(message)s"
 datestr = "%m/%d/%Y %I:%M:%S %p "
 # basic logging config
 logging.basicConfig(
@@ -25,12 +30,6 @@ logging.basicConfig(
     format=fmtstr,
     datefmt=datestr,
 )
-
-global listaPacotes
-global i
-global nPayloads
-
-listaPacotes = []
 
 
 def getHandshake(com):
@@ -53,8 +52,6 @@ def getHandshake(com):
 
 
 
-
-
 def getHead(com):
     print('Esperando o head')
     head, nHead = com.getData(10)
@@ -62,20 +59,20 @@ def getHead(com):
     head = bytesToHead(head)
     return head
 
-
-def getPayload(com, tamanhoPayload):
+def getPayload(com, tamanhoPayload, payloadCompleto):
+    print("Recebendo {0} bytes".format(tamanhoPayload))
+    logging.info("RECEPCAO: Payload com {0} bytes".format(tamanhoPayload))
     payload, numeroPayload = com.getData(tamanhoPayload)
     if payloadCompleto == None:
         payloadCompleto = payload
     else:
         payloadCompleto += payload
 
-
 def getEop(com):
     global eop
-    global intEop
+    print("Recebendo eop")
+    logging.info("RECEPCAO: eop")
     eop, nEop = com.getData(4)
-    intEop = int.from_bytes(eop, byteorder='big')
     return eop
 
 
@@ -104,9 +101,8 @@ def sendConfirmation(com, nPayload, eopP):
     com.sendData(confirmation)
 
 
-def checkAllPackages(com):
-
-    if i == nPayload:
+def checkAllPackages(com, nTotal):
+    if thisPayload == nTotal:
         print("Todos os pacotes recebidos.")
         print("Tamanho total recebido: {}".format(len(payloadCompleto)))
         # ATE AQUI TA OK
@@ -129,31 +125,34 @@ def checkAllPackages(com):
 
 
 def main():
-
     try:
-        global payloadCompleto
-        global nPayload
-        global i
-        payloadCompleto = None
+        global nTotal
+        global thisPayload
+        thisPayload = 1
         errorOrder = False
         errorSize = False
         com2 = enlace(serialNameRecebe)
         com2.enable()
         print("Comunicacao do segundo arduino aberta com sucesso")
         print("Esperando handshake...")
-
         getHandshake(com2)
 
-        i = 0
-        nPayload = 1
-        while i < nPayload:
-            head = getHead(com2)
-            getPayload(com2, head.tamanhoPayload)
-            eop = getEop(com2)
-            sendConfirmation(com2, nPayload, eop)
-            i += 1
+    #    (_____________HANDSHAKE OK_______________)     #
 
-            if i == nPayload:
+        thisPayload = 1
+        nTotal = 2
+        while thisPayload < nTotal:
+            head = getHead(com2)
+            head.printInfoPacote()
+            # Redefinindo o números
+            nTotal = head.totalPacotes
+            thisPayload = head.nPacote
+            getPayload(com2, head.tamanhoPayload, payloadCompleto)
+            eop = getEop(com2)
+            sendConfirmation(com2, thisPayload, eop)
+            
+
+            if thisPayload == nTotal:
                 break
 
 #___________________________________________________________#
