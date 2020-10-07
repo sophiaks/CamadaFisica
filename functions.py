@@ -27,12 +27,15 @@ def bytesToHead(bytes):
 
 
 def getPackageConfirmation(com):
+    print("Esperando confirmacao")
     headConf, nHeadConf = com.getData(10)
-    eop = com.getData(4)
+    eop, nEop = com.getData(4)
     headConf = bytesToHead(headConf)
+    print(headConf.tamanhoPayload)
     print(headConf.nErro, headConf.tipoMsg)
-    if headConf.nErro == 0 and eop is not None and headConf.tipoMsg == 1:
+    if headConf.nErro == 0 and eop == b'\xff\xaa\xff\xaa' and headConf.tipoMsg == 1:
         print("\n\n CONFIRMACAO RECEBIDA E PACOTE ENVIADO COM SUCESSO! \n\n")
         return True
     else:
+        print("eop: {0}".format(eop))
         return False

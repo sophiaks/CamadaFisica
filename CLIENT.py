@@ -33,11 +33,14 @@ def createPayloads(img):
     dictPayloads = {}
     nPayloads = math.ceil(len(img)/114)
     tamanhoTotal = len(img)
-    for i in range(0 ,nPayloads-1):
+    # Primeiro pacote tem índice 1
+    for i in range(1,nPayloads):
         if i == nPayloads:
             dictPayloads[i] = img[114*i:]
         else:
-            dictPayloads[i] = img[114*i:114*(i+1)]   
+            dictPayloads[i] = img[114*i:114*(i+1)]
+    print(nPayloads)
+    print(dictPayloads)
 
 createPayloads(txBuffer)
 print("Payloads Criados\n")
@@ -57,7 +60,7 @@ def main():
         print("Comunicacao aberta com sucesso. Comecando timer...")
         t0 = time.time()
         handshake = Pacote(createHandshake().headToBytes(), 0, eop)
-        print("Enviando Handshake")
+        print("HANDSHAKE")
         while True:
             handshake.sendPacote(com)
             conf = getPackageConfirmation(com)
@@ -79,10 +82,11 @@ def main():
 
         for i in range(1, len(dictPayloads)+1):
             if i <= nPayloads:
-                print(dictPayloads[i])
+                print("i: {0}".format(i))
+                print("Dicionário: {0}".format(dictPayloads))
                 head = Head(3, 1, 2, nPayloads, i, i, 0, i-1, 0, 0)
-                pacote = head + dictPayloads[i] + eop
-                com.sendData(pacote)
+                pacote = Pacote(head.headToBytes(), i, eop)
+                pacote.sendPacote(com)
                 time.sleep(0.1)
                 getPackageConfirmation(com)
 
@@ -100,6 +104,8 @@ def main():
                     com.getData(len(payloadTamanho))
                     com.getData(4)
                     break
+                elif payloadTamanhoHead[0] == 0 or payloadTamanhoHead == 1:
+                    payloadTamanho = 0
 
             print("TAMANHO RECEBIDO: {0} \nTAMANHO ESPERADO: {1}".format(
                 int.from_bytes(payloadTamanho, byteorder='big'), tamanhoTotal))

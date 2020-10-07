@@ -8,6 +8,7 @@ import time
 import logging
 from functions import *
 from enlace import *
+from classes import *
 global listaPacotes
 global i
 global nPayloads
@@ -40,8 +41,8 @@ def getHandshake(com):
     logging.info("RECEPCAO: Handshake")
     print("Handshake recebido")
     time.sleep(0.01)
-    logging.info("ENVIO: Confirmação do Handshake")
-    print("ENVIO: Confirmação do Handshake")
+    logging.info("ENVIO: Confirmacao do Handshake")
+    print("ENVIO: Confirmacao do Handshake")
 
     if ok == 1:
         com.sendData(handshake1)
@@ -77,6 +78,8 @@ def getEop(com):
 
 
 def sendConfirmation(com, nPayload, eopP):
+    
+    erro = False
     print("Verificando pacotes")
     if nPayload == numeroP + 1:
         print("Ordem dos pacotes correta")
@@ -87,7 +90,10 @@ def sendConfirmation(com, nPayload, eopP):
 
     if eopP == eop:
         print("End of package do pacote {0} recebido".format(nPayload))
-        head = Head(4, 0, 0, 0, 0, 0, nPayload, listaPacotes[-1], 0, 0)
+        if len(listaPacotes) != 0:
+            head = Head(4, 0, 0, 0, 0, 0, nPayload, listaPacotes[-1], 0, 0)
+        else: 
+            head = Head(4, 0, 0, 0, 0, 0, nPayload, 0, 0, 0)
 
     else:
         print(
@@ -96,9 +102,9 @@ def sendConfirmation(com, nPayload, eopP):
         head = Head(6, 0, 0, 0, 0, 0, nPayload, nPayload-1, 0, 0)
     if erro == False:
         listaPacotes.append(nPayload)
-        print("Payload {0} adicionado à lista!".format(nPayload))
-    confirmation = head + eop
-    com.sendData(confirmation)
+        print("Payload {0} adicionado a lista!".format(nPayload))
+    confirmation = Pacote(head.headToBytes(), 0, eop)
+    confirmation.sendPacote(com)
 
 
 def checkAllPackages(com, nTotal):

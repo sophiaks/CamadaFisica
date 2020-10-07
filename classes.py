@@ -1,4 +1,4 @@
-from aplicacaoSo import dictPayloads
+from CLIENT import dictPayloads
 
 
 class Head:
@@ -39,27 +39,31 @@ class Head:
 
     def printInfoPacote(self):
         print("\n\n_____PACOTE {0}_____\n\n".format(self.nPacote))
-        if self.tipoMsg == 1:
+        if self.h0 == 1:
             msg = 'Mensagem de handshake'
-        if self.tipoMsg == 2:
+        if self.h0 == 2:
             msg = 'Servidor ocioso, pronto para receber mensagens'
-        if self.tipoMsg == 3:
+        if self.h0 == 3:
             msg = 'Mensagem de dados'
-        if self.tipoMsg == 4:
+        if self.h0 == 4:
             msg = 'Pacote recebido pelo servidor'
-        if self.tipoMsg == 5:
+        if self.h0 == 5:
             msg = 'Timeout'
-        if self.tipoMsg == 6:
+        if self.h0 == 6:
             msg = 'Ocorreu algum erro'
-
-        print('Tipo de mensagem: {}\n'.format(msg))
-        print('Id do Sensor: {}'.format(self.idSensor))
-        print('Id do Servidor: {}'.format(self.idServer))
-        print('Total de pacotes: {}'.format(self.totalPacotes))
-        print('Número deste pacote: {}'.format(self.nPacote))
+        else:
+            msg = 'OK'
+        print(msg)
+        print('Tipo de mensagem: {}\n'.format(self.h0))
+        print('Id do Sensor: {}'.format(self.h1))
+        print('Id do Servidor: {}'.format(self.h2))
+        print('Total de pacotes: {}'.format(self.h3))
+        print('Numero deste pacote: {}'.format(self.nPacote))
         print('Id do arquivo: {}'.format(self.idFile))
         print('Erro no pacote: {}'.format(self.nErro))
-        print('Último pacote enviado com sucesso: {}\n'.format(self.ultimoPacoteOk))
+        if (self.ultimoPacoteOk == 0):
+            print('Ultimo pacote enviado com sucesso: Handshake')
+        print('Ultimo pacote enviado com sucesso: {}\n'.format(self.ultimoPacoteOk))
 
     def headToBytes(self):
         h0 = self.h0
@@ -98,6 +102,7 @@ class Pacote:
             self.pacote = head + dictPayloads[i] + self.eop
         else:
             self.pacote = head + self.eop
+            print(self.pacote)
 
     # def pacoteToBytes():
 
