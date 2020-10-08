@@ -12,14 +12,26 @@
 from enlace import *
 import time
 import os
-
-
+import logging
 serialNameRecebe = "COM3"
-imageW = "eikiRecebido.png"
 
+logging.basicConfig(filename='SERVER.log', filemode='w', format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+logging.info("COMECO DO LOG")
+
+def getHandshake(com):
+    global idServerRec
+    time1 = time.time()
+    handshake, nHandshake = com.getNData_Timed(14, time1)
+    idServerRec = handshake[2]
+    logging.info("ENVIO : HANDSHAKE")
+    print("Handshake recebido")
+    time.sleep(5)
+    return handshake
+
+    
 
 def main():
-
+    idServer = b'\x02'
     try:
         global payloadCompleto
         payloadCompleto = None
@@ -28,59 +40,55 @@ def main():
         print("Comunicacao do segundo arduino aberta com sucesso")
         print("Esperando handshake...")
         # Recebendo handshake
-        ok, nOk = com2.getData(14)
-        ok = ok[3]
-        print("Handshake recebido")
-        time.sleep(0.01)
-        handshake = int.from_bytes(ok, byteorder="big")
-        print("Mandando confirmacao do handshake")
-        print('Handshake = {} \n'.format(handshake))
-        if handshake == 1:
-            com2.sendData(ok)
-            # 1 senddata e 3 getdatas!
+        handshake = getHandshake(com2)
+
+        if idServerRec == int.from_bytes(idServer, byteorder="big"):
+            print("Mandando confirmacao do handshake")
+            tipoMsg = b'\x02'
+            idClient = b'\x01'
+            idServer = b'\x02'
+            eop =  b'\0xFF\0xAA\0xFF\0xAA'
+            handshakeAns = tipoMsg + idClient + idServer + handshake[3].to_bytes(1, byteorder="big") + handshake[4].to_bytes(1, byteorder="big") + handshake[5].to_bytes(1, byteorder="big") + handshake[6].to_bytes(1, byteorder="big") + handshake[7].to_bytes(1, byteorder="big") + handshake[8].to_bytes(1, byteorder="big") + handshake[9].to_bytes(1, byteorder="big")  + eop
+            com2.sendData(handshakeAns)
         else:
+            print(idServerRec, idServer)
             print("Recepcao do handshake falhou. Tenta novamente.")
             com2.disable()
+
         i = 0
         nPayload = 1
         finished = False
+
         while i < nPayload and not finished:
+            t1 = time.time()
             print('Esperando o head')
             head, nHead = com2.getData(10)
-            # DESMEMBRANDO O HEAD
             tipoMsg = head[0]
-            handshake = head[1]
-            nPayload = head[2]
-            tamanhoPayload = head[3]
+            totalPackages = head[3]
             i = head[4]
-            tamanhoTotalBytes = head[5:]
+            sizePayload = head[5]
+            errorIn = head[6]
+            lastPackage = head[7]
+            crc = head[8:9]
 
             print('\nPacote {0}/{1}'.format(i, nPayload))
-
-            tamanhoTotal = int.from_bytes(tamanhoTotalBytes, byteorder='big')
-
             print('_____PAYLOAD {0}_____'.format(i))
-            print('Handshake: {0} \nNumero de Payloads: {1} \nNumero desse payload: {2} \nTamanho desse Payload: {3} Bytes\nTamanho total: {4} bytes'.format(
-                handshake, nPayload, i, tamanhoPayload, tamanhoTotal))
 
-            if tipoMsg == 0:
-                tipoMsg = "DADOS"
-            print("Tipo da mensagem: {0}".format(tipoMsg))
+            payload, nPayload = com2.getData(sizePayload)
 
-            payload, nPayload = com2.getData(tamanhoPayload)
             if payloadCompleto == None:
                 payloadCompleto = payload
             else:
                 payloadCompleto += payload
+
             print(
-                '\n{0}/{1} Bytes recebidos'.format(tamanhoPayload, tamanhoTotal))
+                '\n{0} Bytes recebidos'.format(sizePayload))
             eop, nEop = com2.getData(4)
-            intEop = int.from_bytes(eop, byteorder='big')
-            print('\nEnd of package: {0}'.format(intEop))
-            if intEop == 4321:
+
+            if eop == b'\0xff\0xAA\0xFF\0xAA':
                 print("End of package do pacote {0} recebido".format(i))
-                confirmation = head + eop
-                com2.sendData(confirmation)
+                
+            tamanhoTotal = 0
             # Encerra comunicação
             if len(payloadCompleto) == tamanhoTotal:
                 print("Todos os pacotes recebidos.")

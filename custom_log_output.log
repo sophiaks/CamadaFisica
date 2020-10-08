@@ -1,0 +1,5 @@
+ Name: SERVER_SOPHIA : 10/07/2020 07:42:17 PM : (SERVER.py): INFO: getHandshake Line: 41 - RECEPCAO: Handshake
+ Name: SERVER_SOPHIA : 10/07/2020 07:42:17 PM : (SERVER.py): INFO: getHandshake Line: 44 - ENVIO: Confirmacao do Handshake
+ Name: SERVER_SOPHIA : 10/07/2020 07:42:18 PM : (SERVER.py): INFO: getPayload Line: 65 - RECEPCAO: Payload com 0 bytes
+ Name: SERVER_SOPHIA : 10/07/2020 07:42:18 PM : (SERVER.py): INFO: getEop Line: 75 - RECEPCAO: eop
+ Name: SERVER_SOPHIA : 10/07/2020 07:42:18 PM : (SERVER.py): INFO: getPayload Line: 65 - RECEPCAO: Payload com 208 bytes

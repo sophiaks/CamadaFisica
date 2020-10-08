@@ -72,8 +72,16 @@ class RX(object):
     def getNData(self, size):
         while(self.getBufferLen() < size):
             time.sleep(0.05)
-
         return(self.getBuffer(size))
+
+    def getNData_Timed(self, size, time1, counterTimer):
+        while(self.getBufferLen() < size):
+            timeElapsed = time.time() - time1
+            if timeElapsed > 5:
+                counterTimer += 1
+                return("DeuRuim")
+            time.sleep(0.05)
+            return(self.getBuffer(size))
 
     def clearBuffer(self):
         self.buffer = b""
